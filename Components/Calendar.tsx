@@ -11,7 +11,18 @@ interface CalendarItem {
   content: string;
 }
 
-type CalendarItemsState = Record<number, CalendarItem[]>;
+type CalendarItemsState = Record<string, Record<number, CalendarItem[]>>;
+
+interface DayDetailProps {
+  day: number;
+  currentDate: Date;
+  calendarItems: CalendarItemsState;
+  handleDragStart: (item: CalendarItem | string) => void;
+  handleDelete: (day: number, uniqueId: string) => void;
+  setSelectedDate: (date: number | null) => void;
+  months: string[];
+  setCalendarItems: React.Dispatch<React.SetStateAction<CalendarItemsState>>;
+}
 
 const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -61,14 +72,17 @@ const Calendar: React.FC = () => {
         uniqueId: nanoid(),
       };
 
+      const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+
       setCalendarItems((prevItems) => {
         const newItems = { ...prevItems };
-        if (!newItems[day]) newItems[day] = [];
+        if (!newItems[monthKey]) newItems[monthKey] = {};
+        if (!newItems[monthKey][day]) newItems[monthKey][day] = [];
 
         // Check for duplicates
-        const isDuplicate = newItems[day].some(item => item.content === newItem.content);
+        const isDuplicate = newItems[monthKey][day].some(item => item.content === newItem.content);
         if (!isDuplicate) {
-          newItems[day].push(newItem);
+          newItems[monthKey][day].push(newItem);
         }
 
         return newItems;
@@ -80,10 +94,14 @@ const Calendar: React.FC = () => {
   };
 
   const handleDelete = (day: number, uniqueId: string) => {
+    const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+
     setCalendarItems((prevItems) => {
       const newItems = { ...prevItems };
-      newItems[day] = newItems[day]?.filter((item) => item.uniqueId !== uniqueId);
-      if (newItems[day]?.length === 0) delete newItems[day];
+      if (newItems[monthKey] && newItems[monthKey][day]) {
+        newItems[monthKey][day] = newItems[monthKey][day].filter((item) => item.uniqueId !== uniqueId);
+        if (newItems[monthKey][day].length === 0) delete newItems[monthKey][day];
+      }
       return newItems;
     });
   };
@@ -122,6 +140,7 @@ const Calendar: React.FC = () => {
           handleDelete={handleDelete}
           setSelectedDate={setSelectedDate}
           months={months}
+          setCalendarItems={setCalendarItems} // Pass this prop
         />
       )}
       <DraggableItems
