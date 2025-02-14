@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { nanoid } from 'nanoid';
 
 interface CalendarItem {
   uniqueId: string;
@@ -26,6 +27,8 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
   selectedDate,
   setSelectedDate,
 }) => {
+  const [draggedItem, setDraggedItem] = useState<CalendarItem | null>(null);
+
   const getDaysInMonth = (year: number, month: number): number => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -57,12 +60,16 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
                 key={item.uniqueId}
                 className="calendar-item"
                 draggable
-                onDragStart={() => handleDragStart(item)}
+                onDragStart={() => handleDragStartLocal(item)}
+                onClick={(e) => e.stopPropagation()} // Prevents navigation to detailed view
               >
                 {item.content}
                 <button
                   className="delete-button"
-                  onClick={() => handleDelete(day, item.uniqueId)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevents navigation to detailed view
+                    handleDelete(day, item.uniqueId);
+                  }}
                 >
                   X
                 </button>
@@ -74,6 +81,11 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
     }
 
     return days;
+  };
+
+  const handleDragStartLocal = (item: CalendarItem) => {
+    setDraggedItem(item);
+    handleDragStart(item);
   };
 
   return (
