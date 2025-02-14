@@ -60,15 +60,20 @@ const Calendar: React.FC = () => {
         ...draggedItem,
         uniqueId: nanoid(),
       };
+
       setCalendarItems((prevItems) => {
         const newItems = { ...prevItems };
         if (!newItems[day]) newItems[day] = [];
-        const itemExists = newItems[day].some(item => item.content === draggedItem.content);
-        if (!itemExists) {
+
+        // Check for duplicates
+        const isDuplicate = newItems[day].some(item => item.content === newItem.content);
+        if (!isDuplicate) {
           newItems[day].push(newItem);
         }
+
         return newItems;
       });
+
       setDraggableItems((prevItems) => prevItems.filter(item => item.uniqueId !== draggedItem.uniqueId));
       setDraggedItem(null);
     }
