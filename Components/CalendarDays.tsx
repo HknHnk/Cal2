@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, JSX } from 'react';
 import { nanoid } from 'nanoid';
 
 interface CalendarItem {
@@ -9,7 +9,7 @@ interface CalendarItem {
 interface CalendarDaysProps {
   currentDate: Date;
   daysOfWeek: string[];
-  calendarItems: Record<number, CalendarItem[]>;
+  calendarItems: Record<string, Record<number, CalendarItem[]>>;
   handleDrop: (day: number) => void;
   handleDragStart: (item: CalendarItem | string) => void;
   handleDelete: (day: number, uniqueId: string) => void;
@@ -38,6 +38,7 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
     const month = currentDate.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
     const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const monthKey = `${year}-${month}`;
 
     const days: JSX.Element[] = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -55,7 +56,7 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
         >
           <div className="date-number">{day}</div>
           <div className="calendar-items">
-            {calendarItems[day]?.map((item) => (
+            {calendarItems[monthKey]?.[day]?.map((item) => (
               <div
                 key={item.uniqueId}
                 className="calendar-item"
