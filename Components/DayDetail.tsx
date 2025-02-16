@@ -5,6 +5,8 @@ import './DayDetail.css'; // Import the CSS file
 interface CalendarItem {
   uniqueId: string;
   content: string;
+  startTime: string;
+  endTime: string;
 }
 
 interface DayDetailProps {
@@ -28,11 +30,12 @@ const DayDetail: React.FC<DayDetailProps> = ({
   months,
   setCalendarItems, // Add this prop
 }) => {
-  const timeSlots = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+  const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
   const [itemsByTimeSlot, setItemsByTimeSlot] = useState<Record<string, CalendarItem[]>>({});
   const [showModal, setShowModal] = useState(false);
-  const [currentSlot, setCurrentSlot] = useState<string | null>(null);
   const [newItemContent, setNewItemContent] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
 
   useEffect(() => {
     // Initialize itemsByTimeSlot with calendarItems for the selected day
@@ -40,27 +43,37 @@ const DayDetail: React.FC<DayDetailProps> = ({
     const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
     if (calendarItems[monthKey] && calendarItems[monthKey][day]) {
       calendarItems[monthKey][day].forEach((item) => {
-        const timeSlot = item.content.split(' ')[0]; // Assuming the content starts with the time slot
-        if (!initialItemsByTimeSlot[timeSlot]) initialItemsByTimeSlot[timeSlot] = [];
-        initialItemsByTimeSlot[timeSlot].push(item);
+        let current = item.startTime;
+        while (current !== item.endTime) {
+          if (!initialItemsByTimeSlot[current]) initialItemsByTimeSlot[current] = [];
+          initialItemsByTimeSlot[current].push(item);
+          current = `${(parseInt(current.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
+        }
       });
     }
     setItemsByTimeSlot(initialItemsByTimeSlot);
   }, [day, calendarItems, currentDate]);
 
   const handleAddItem = () => {
-    if (currentSlot && newItemContent) {
+    if (startTime && endTime && newItemContent) {
       const newItem = {
         uniqueId: nanoid(),
-        content: `${currentSlot} ${newItemContent}`,
+        content: newItemContent,
+        startTime,
+        endTime,
       };
 
       setItemsByTimeSlot((prevItems) => {
         const newItems = { ...prevItems };
-        if (!newItems[currentSlot]) newItems[currentSlot] = [];
-        // Remove duplicates
-        newItems[currentSlot] = newItems[currentSlot].filter(item => item.content !== newItem.content);
-        newItems[currentSlot].push(newItem);
+        let current = startTime;
+        while (current !== endTime) {
+          if (!newItems[current]) newItems[current] = [];
+          newItems[current] = newItems[current].filter(item => item.content !== newItem.content);
+          newItems[current].push(newItem);
+          current = `${(parseInt(current.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
+        }
+        if (!newItems[endTime]) newItems[endTime] = [];
+        newItems[endTime].push(newItem);
         return newItems;
       });
 
@@ -70,7 +83,6 @@ const DayDetail: React.FC<DayDetailProps> = ({
         const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
         if (!newItems[monthKey]) newItems[monthKey] = {};
         if (!newItems[monthKey][day]) newItems[monthKey][day] = [];
-        // Remove duplicates
         newItems[monthKey][day] = newItems[monthKey][day].filter(item => item.content !== newItem.content);
         newItems[monthKey][day].push(newItem);
         return newItems;
@@ -78,12 +90,21 @@ const DayDetail: React.FC<DayDetailProps> = ({
 
       setShowModal(false);
       setNewItemContent('');
+      setStartTime('');
+      setEndTime('');
     }
   };
 
   const openModal = (timeSlot: string) => {
-    setCurrentSlot(timeSlot);
+    setStartTime(timeSlot);
     setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setNewItemContent('');
+    setStartTime('');
+    setEndTime('');
   };
 
   return (
@@ -121,15 +142,28 @@ const DayDetail: React.FC<DayDetailProps> = ({
       {showModal && (
         <div className="modal">
           <div className="modal-content">
-            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            <h3>Add Item to {currentSlot}</h3>
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <h3>Add Item</h3>
             <input
               type="text"
+              placeholder="Content"
               value={newItemContent}
               onChange={(e) => setNewItemContent(e.target.value)}
             />
+            <input
+              type="time"
+              placeholder="Start Time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
+            <input
+              type="time"
+              placeholder="End Time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+            />
             <button onClick={handleAddItem}>Add</button>
-            <button onClick={() => setShowModal(false)}>Cancel</button>
+            <button onClick={closeModal}>Cancel</button>
           </div>
         </div>
       )}
