@@ -1,9 +1,12 @@
-import React, { useState, JSX } from 'react';
+import React, { useState } from 'react';
+import { JSX } from 'react';
 import { nanoid } from 'nanoid';
 
 interface CalendarItem {
   uniqueId: string;
   content: string;
+  startTime: string;
+  endTime: string;
 }
 
 interface CalendarDaysProps {
@@ -64,7 +67,7 @@ const CalendarDays: React.FC<CalendarDaysProps> = ({
                 onDragStart={() => handleDragStartLocal(item)}
                 onClick={(e) => e.stopPropagation()} // Prevents navigation to detailed view
               >
-                {item.content}
+                {item.content} ({item.startTime} - {item.endTime})
                 <button
                   className="delete-button"
                   onClick={(e) => {
