@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import './DayDetail.css'; // Import the CSS file
+import AddItemModal from './AddItemModal'; // Import the new modal component
 
 interface CalendarItem {
   uniqueId: string;
@@ -49,6 +50,8 @@ const DayDetail: React.FC<DayDetailProps> = ({
           initialItemsByTimeSlot[current].push(item);
           current = `${(parseInt(current.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
         }
+        if (!initialItemsByTimeSlot[item.endTime]) initialItemsByTimeSlot[item.endTime] = [];
+        initialItemsByTimeSlot[item.endTime].push(item);
       });
     }
     setItemsByTimeSlot(initialItemsByTimeSlot);
@@ -139,36 +142,20 @@ const DayDetail: React.FC<DayDetailProps> = ({
           ))}
         </div>
       </div>
-      {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <button className="modal-close" onClick={closeModal}>×</button>
-            <h3>Add Item</h3>
-            <input
-              type="text"
-              placeholder="Content"
-              value={newItemContent}
-              onChange={(e) => setNewItemContent(e.target.value)}
-            />
-            <input
-              type="time"
-              placeholder="Start Time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
-            <input
-              type="time"
-              placeholder="End Time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
-            <button onClick={handleAddItem}>Add</button>
-            <button onClick={closeModal}>Cancel</button>
-          </div>
-        </div>
-      )}
+      <AddItemModal
+        showModal={showModal}
+        closeModal={closeModal}
+        newItemContent={newItemContent}
+        setNewItemContent={setNewItemContent}
+        startTime={startTime}
+        setStartTime={setStartTime}
+        endTime={endTime}
+        setEndTime={setEndTime}
+        handleAddItem={handleAddItem}
+      />
     </div>
   );
 };
 
 export default DayDetail;
+
