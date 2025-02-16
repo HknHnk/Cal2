@@ -32,7 +32,7 @@ const DayDetail: React.FC<DayDetailProps> = ({
   setCalendarItems, // Add this prop
 }) => {
   const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-  const [itemsByTimeSlot, setItemsByTimeSlot] = useState<Record<string, CalendarItem[]>>({});
+  const [itemsByTimeSlot, setItemsByTimeSlot] = useState<CalendarItem[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [newItemContent, setNewItemContent] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -40,21 +40,10 @@ const DayDetail: React.FC<DayDetailProps> = ({
 
   useEffect(() => {
     // Initialize itemsByTimeSlot with calendarItems for the selected day
-    const initialItemsByTimeSlot: Record<string, CalendarItem[]> = {};
     const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
     if (calendarItems[monthKey] && calendarItems[monthKey][day]) {
-      calendarItems[monthKey][day].forEach((item) => {
-        let current = item.startTime;
-        while (current !== item.endTime) {
-          if (!initialItemsByTimeSlot[current]) initialItemsByTimeSlot[current] = [];
-          initialItemsByTimeSlot[current].push(item);
-          current = `${(parseInt(current.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
-        }
-        if (!initialItemsByTimeSlot[item.endTime]) initialItemsByTimeSlot[item.endTime] = [];
-        initialItemsByTimeSlot[item.endTime].push(item);
-      });
+      setItemsByTimeSlot(calendarItems[monthKey][day]);
     }
-    setItemsByTimeSlot(initialItemsByTimeSlot);
   }, [day, calendarItems, currentDate]);
 
   const handleAddItem = () => {
@@ -66,17 +55,10 @@ const DayDetail: React.FC<DayDetailProps> = ({
         endTime,
       };
 
+      // Check for duplicates and remove one copy if found
       setItemsByTimeSlot((prevItems) => {
-        const newItems = { ...prevItems };
-        let current = startTime;
-        while (current !== endTime) {
-          if (!newItems[current]) newItems[current] = [];
-          newItems[current] = newItems[current].filter(item => item.content !== newItem.content);
-          newItems[current].push(newItem);
-          current = `${(parseInt(current.split(':')[0]) + 1).toString().padStart(2, '0')}:00`;
-        }
-        if (!newItems[endTime]) newItems[endTime] = [];
-        newItems[endTime].push(newItem);
+        const newItems = prevItems.filter(item => !(item.content === newItemContent && item.startTime === startTime && item.endTime === endTime));
+        newItems.push(newItem);
         return newItems;
       });
 
@@ -86,7 +68,7 @@ const DayDetail: React.FC<DayDetailProps> = ({
         const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
         if (!newItems[monthKey]) newItems[monthKey] = {};
         if (!newItems[monthKey][day]) newItems[monthKey][day] = [];
-        newItems[monthKey][day] = newItems[monthKey][day].filter(item => item.content !== newItem.content);
+        newItems[monthKey][day] = newItems[monthKey][day].filter(item => !(item.content === newItemContent && item.startTime === startTime && item.endTime === endTime));
         newItems[monthKey][day].push(newItem);
         return newItems;
       });
@@ -98,8 +80,7 @@ const DayDetail: React.FC<DayDetailProps> = ({
     }
   };
 
-  const openModal = (timeSlot: string) => {
-    setStartTime(timeSlot);
+  const openModal = () => {
     setShowModal(true);
   };
 
@@ -110,10 +91,19 @@ const DayDetail: React.FC<DayDetailProps> = ({
     setEndTime('');
   };
 
+  const calculateItemPosition = (startTime: string, endTime: string) => {
+    const startHour = parseInt(startTime.split(':')[0]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const top = (startHour / 24) * 100;
+    const height = ((endHour - startHour) / 24) * 100;
+    return { top: `${top}%`, height: `${height}%` };
+  };
+
   return (
     <div className="day-detail">
       <button className="back-button" onClick={() => setSelectedDate(null)}>Back</button>
       <h2>{months[currentDate.getMonth()]} {day}, {currentDate.getFullYear()}</h2>
+      <button className="add-item-button" onClick={openModal}>Add Item</button>
       <div className="day-schedule">
         <div className="time-slots">
           {timeSlots.map((time, index) => (
@@ -121,25 +111,24 @@ const DayDetail: React.FC<DayDetailProps> = ({
           ))}
         </div>
         <div className="events">
-          {timeSlots.map((time, index) => (
-            <div key={index} className="event-slot">
-              <button onClick={() => openModal(time)}>Add Item</button>
-              {itemsByTimeSlot[time]?.map((item) => (
-                <div
-                  key={item.uniqueId}
-                  className="calendar-item"
+          {itemsByTimeSlot.map((item) => {
+            const { top, height } = calculateItemPosition(item.startTime, item.endTime);
+            return (
+              <div
+                key={item.uniqueId}
+                className="calendar-item"
+                style={{ top, height }}
+              >
+                {item.content}
+                <button
+                  className="delete-button"
+                  onClick={() => handleDelete(day, item.uniqueId)}
                 >
-                  {item.content}
-                  <button
-                    className="delete-button"
-                    onClick={() => handleDelete(day, item.uniqueId)}
-                  >
-                    X
-                  </button>
-                </div>
-              ))}
-            </div>
-          ))}
+                  X
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
       <AddItemModal
@@ -158,4 +147,3 @@ const DayDetail: React.FC<DayDetailProps> = ({
 };
 
 export default DayDetail;
-
