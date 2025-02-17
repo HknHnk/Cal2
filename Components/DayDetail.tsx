@@ -93,11 +93,64 @@ const DayDetail: React.FC<DayDetailProps> = ({
 
   const calculateItemPosition = (startTime: string, endTime: string) => {
     const startHour = parseInt(startTime.split(':')[0]);
+    const startMinute = parseInt(startTime.split(':')[1]);
     const endHour = parseInt(endTime.split(':')[0]);
-    const top = (startHour / 24) * 100;
-    const height = ((endHour - startHour) / 24) * 100;
+    const endMinute = parseInt(endTime.split(':')[1]);
+
+    const top = ((startHour * 60 + startMinute) / (24 * 60)) * 100;
+    const height = ((endHour * 60 + endMinute - (startHour * 60 + startMinute)) / (24 * 60)) * 100;
+
     return { top: `${top}%`, height: `${height}%` };
   };
+
+  const calculateOverlap = (items: CalendarItem[]) => {
+    const overlaps: { [key: string]: number } = {};
+    items.forEach((item, index) => {
+      overlaps[item.uniqueId] = 0;
+      for (let i = 0; i < items.length; i++) {
+        if (i !== index && itemsOverlap(item, items[i])) {
+          overlaps[item.uniqueId]++;
+        }
+      }
+    });
+    return overlaps;
+  };
+
+  const itemsOverlap = (item1: CalendarItem, item2: CalendarItem) => {
+    return (
+      (item1.startTime < item2.endTime && item1.endTime > item2.startTime) ||
+      (item2.startTime < item1.endTime && item2.endTime > item1.startTime)
+    );
+  };
+
+  const overlaps = calculateOverlap(itemsByTimeSlot);
+
+  // Calculate the maximum number of overlapping items
+  const maxOverlap = Math.max(...Object.values(overlaps), 0);
+
+  const assignColumns = (items: CalendarItem[]) => {
+    const columns: { [key: string]: number } = {};
+    const usedColumns: { [key: number]: boolean } = {};
+
+    items.forEach(item => {
+      let column = 1;
+      while (usedColumns[column]) {
+        column++;
+      }
+      columns[item.uniqueId] = column;
+      usedColumns[column] = true;
+
+      items.forEach(otherItem => {
+        if (item !== otherItem && itemsOverlap(item, otherItem)) {
+          usedColumns[columns[otherItem.uniqueId]] = true;
+        }
+      });
+    });
+
+    return columns;
+  };
+
+  const columns = assignColumns(itemsByTimeSlot);
 
   return (
     <div className="day-detail">
@@ -110,25 +163,28 @@ const DayDetail: React.FC<DayDetailProps> = ({
             <div key={index} className="time-slot">{time}</div>
           ))}
         </div>
-        <div className="events">
-          {itemsByTimeSlot.map((item) => {
-            const { top, height } = calculateItemPosition(item.startTime, item.endTime);
-            return (
-              <div
-                key={item.uniqueId}
-                className="calendar-item"
-                style={{ top, height }}
-              >
-                {item.content}
-                <button
-                  className="delete-button"
-                  onClick={() => handleDelete(day, item.uniqueId)}
+        <div className="events" style={{ display: 'grid', gridTemplateColumns: `repeat(${maxOverlap + 2}, 1fr)` }}>
+          {itemsByTimeSlot
+            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            .map((item) => {
+              const { top, height } = calculateItemPosition(item.startTime, item.endTime);
+              const column = columns[item.uniqueId] + 1; // +1 to account for the time column
+              return (
+                <div
+                  key={item.uniqueId}
+                  className="calendar-item"
+                  style={{ top, height, gridColumn: column }}
                 >
-                  X
-                </button>
-              </div>
-            );
-          })}
+                  {item.content}
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDelete(day, item.uniqueId)}
+                  >
+                    X
+                  </button>
+                </div>
+              );
+            })}
         </div>
       </div>
       <AddItemModal
