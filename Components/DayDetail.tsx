@@ -21,6 +21,19 @@ interface DayDetailProps {
   setCalendarItems: React.Dispatch<React.SetStateAction<Record<string, Record<number, CalendarItem[]>>>>; // Add this prop
 }
 
+interface AddItemModalProps {
+  showModal: boolean;
+  closeModal: () => void;
+  newItemContent: string;
+  setNewItemContent: React.Dispatch<React.SetStateAction<string>>;
+  startTime: string;
+  setStartTime: React.Dispatch<React.SetStateAction<string>>;
+  endTime: string;
+  setEndTime: React.Dispatch<React.SetStateAction<string>>;
+  handleAddItem: () => void;
+  handleKeyPress: (event: React.KeyboardEvent<HTMLInputElement>) => void; // Add this line
+}
+
 const DayDetail: React.FC<DayDetailProps> = ({
   day,
   currentDate,
@@ -99,6 +112,12 @@ const DayDetail: React.FC<DayDetailProps> = ({
     setNewItemContent('');
     setStartTime('');
     setEndTime('');
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleAddItem();
+    }
   };
 
   const calculateItemPosition = (startTime: string, endTime: string) => {
@@ -207,6 +226,7 @@ const DayDetail: React.FC<DayDetailProps> = ({
         endTime={endTime}
         setEndTime={setEndTime}
         handleAddItem={handleAddItem}
+        handleKeyPress={handleKeyPress} // Pass the handleKeyPress function to the modal
       />
     </div>
   );
