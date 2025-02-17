@@ -80,6 +80,16 @@ const DayDetail: React.FC<DayDetailProps> = ({
     }
   };
 
+  const handleDeleteItem = (day: number, uniqueId: string) => {
+    setItemsByTimeSlot((prevItems) => prevItems.filter(item => item.uniqueId !== uniqueId));
+    setCalendarItems((prevItems) => {
+      const newItems = { ...prevItems };
+      const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+      newItems[monthKey][day] = newItems[monthKey][day].filter(item => item.uniqueId !== uniqueId);
+      return newItems;
+    });
+  };
+
   const openModal = () => {
     setShowModal(true);
   };
@@ -97,10 +107,10 @@ const DayDetail: React.FC<DayDetailProps> = ({
     const endHour = parseInt(endTime.split(':')[0]);
     const endMinute = parseInt(endTime.split(':')[1]);
 
-    const top = ((startHour * 60 + startMinute) / (24 * 60)) * 100;
-    const height = ((endHour * 60 + endMinute - (startHour * 60 + startMinute)) / (24 * 60)) * 100;
+    const startRow = startHour * 2 + Math.floor(startMinute / 30) + 1;
+    const endRow = endHour * 2 + Math.floor(endMinute / 30) + 1;
 
-    return { top: `${top}%`, height: `${height}%` };
+    return { startRow, endRow };
   };
 
   const calculateOverlap = (items: CalendarItem[]) => {
@@ -163,22 +173,22 @@ const DayDetail: React.FC<DayDetailProps> = ({
             <div key={index} className="time-slot">{time}</div>
           ))}
         </div>
-        <div className="events" style={{ display: 'grid', gridTemplateColumns: `repeat(${maxOverlap + 2}, 1fr)` }}>
+        <div className="events" style={{ display: 'grid', gridTemplateColumns: `repeat(${maxOverlap + 2}, 1fr)`, gridTemplateRows: 'repeat(48, 1fr)' }}>
           {itemsByTimeSlot
             .sort((a, b) => a.startTime.localeCompare(b.startTime))
             .map((item) => {
-              const { top, height } = calculateItemPosition(item.startTime, item.endTime);
+              const { startRow, endRow } = calculateItemPosition(item.startTime, item.endTime);
               const column = columns[item.uniqueId] + 1; // +1 to account for the time column
               return (
                 <div
                   key={item.uniqueId}
                   className="calendar-item"
-                  style={{ top, height, gridColumn: column }}
+                  style={{ gridColumn: column, gridRow: `${startRow} / ${endRow}` }}
                 >
                   {item.content}
                   <button
                     className="delete-button"
-                    onClick={() => handleDelete(day, item.uniqueId)}
+                    onClick={() => handleDeleteItem(day, item.uniqueId)}
                   >
                     X
                   </button>
