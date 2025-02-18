@@ -58,26 +58,55 @@ const DayDetail: React.FC<DayDetailProps> = ({
   };
 
   const renderCalendarItems = () => {
-    return itemsByTimeSlot
-      .sort((a, b) => a.startTime.localeCompare(b.startTime))
-      .map((item) => {
-        const { startRow, endRow } = calculateItemPosition(item.startTime, item.endTime);
-        return (
+    const sortedItems = itemsByTimeSlot.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    // Track overlapping items and their offsets
+    const overlapOffsets: Record<string, number> = {};
+
+    return sortedItems.map((item) => {
+      const { startRow, endRow } = calculateItemPosition(item.startTime, item.endTime);
+
+      // Check for overlapping items
+      const overlappingItems = sortedItems.filter((otherItem) => {
+        if (item.uniqueId === otherItem.uniqueId) return false; // Skip the current item
+        const { startRow: otherStartRow, endRow: otherEndRow } = calculateItemPosition(otherItem.startTime, otherItem.endTime);
+        return !(endRow <= otherStartRow || startRow >= otherEndRow); // Check for overlap
+      });
+
+      // Calculate the overlap offset for the text
+      const overlapOffset = overlappingItems.reduce((maxOffset, otherItem) => {
+        return Math.max(maxOffset, overlapOffsets[otherItem.uniqueId] || 0);
+      }, 0);
+
+      // Update the offset for the current item
+      overlapOffsets[item.uniqueId] = overlapOffset + 20; // 20px offset for each overlapping item
+
+      return (
+        <div
+          key={item.uniqueId}
+          className="calendar-item"
+          style={{
+            gridRow: `${startRow} / ${endRow}`,
+            gridColumn: '1 / -1',
+          }}
+        >
           <div
-            key={item.uniqueId}
-            className="calendar-item"
-            style={{ gridRow: `${startRow} / ${endRow}`, gridColumn: '1 / -1' }}
+            className="calendar-item-text"
+            style={{
+              top: `${overlapOffset}px`, // Shift text for overlapping items
+            }}
           >
             {item.content} ({item.startTime} - {item.endTime})
-            <button
-              className="delete-button"
-              onClick={() => handleDelete(day, item.uniqueId)}
-            >
-              X
-            </button>
           </div>
-        );
-      });
+          <button
+            className="delete-button"
+            onClick={() => handleDelete(day, item.uniqueId)}
+          >
+            X
+          </button>
+        </div>
+      );
+    });
   };
 
   return (
